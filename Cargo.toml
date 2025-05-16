@@ -1,0 +1,10 @@
+[package]
+name = "tokio-debouncer"
+version = "0.1.1"
+edition = "2021"
+description = "A minimal async debouncer for signal batching in Tokio"
+repository = "https://github.com/yourname/tokio-debouncer"
+
+
+[dependencies]
+tokio = { version = "^1", features = ["sync", "time", "test-util", "rt", "macros"] }
