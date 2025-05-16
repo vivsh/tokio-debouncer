@@ -2,8 +2,8 @@
 
 [![Crates.io](https://img.shields.io/crates/v/tokio-debouncer.svg)](https://crates.io/crates/tokio-debouncer)
 [![Docs.rs](https://docs.rs/tokio-debouncer/badge.svg)](https://docs.rs/tokio-debouncer)
-[![License](https://img.shields.io/crates/l/tokio-debouncer.svg)](https://crates.io/crates/tokio-debouncer)
-
+<!-- [![License](https://img.shields.io/crates/l/tokio-debouncer.svg)](https://crates.io/crates/tokio-debouncer) -->
+[![License: MIT](https://img.shields.io/badge/license-MIT-blue.svg)](https://opensource.org/licenses/MIT)
 ---
 
 **`tokio-debouncer`** is a lightweight, cancel-safe async debouncer for [Tokio](https://tokio.rs/) tasks.
