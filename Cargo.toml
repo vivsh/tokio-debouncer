@@ -7,7 +7,7 @@ repository = "https://github.com/yourname/tokio-debouncer"
 documentation = "https://docs.rs/tokio-debouncer"
 license = "MIT"
 keywords = ["tokio", "debounce", "async", "signal", "batching"]
-categories = ["asynchronous", "concurrency", "synchronization", "algorithms"]
+categories = ["asynchronous", "concurrency", "data-structures"]
 readme = "README.md"
 
 [dependencies]
