@@ -9,7 +9,7 @@ use tokio::time::{self, Duration};
 async fn leading_runs_immediately_on_first_trigger() {
     // Test: Leading mode should yield immediately on first trigger
     let debounce = Debouncer::new(Duration::from_secs(10), DebounceMode::Leading);
-    debounce.trigger().await;
+    debounce.trigger();
 
     let _guard = debounce.ready().await;
     assert!(debounce.is_triggered().await); // should still be triggered until .done() or drop
@@ -20,11 +20,11 @@ async fn leading_respects_cooldown() {
     // Test: Leading mode should only yield again after cooldown has passed
     let debounce = Debouncer::new(Duration::from_secs(10), DebounceMode::Leading);
 
-    debounce.trigger().await;
+    debounce.trigger();
     let mut guard = debounce.ready().await;
-    guard.done().await;
+    guard.done();
 
-    debounce.trigger().await;
+    debounce.trigger();
     time::advance(Duration::from_secs(9)).await;
     let mut yielded = false;
     tokio::select! {
@@ -42,7 +42,7 @@ async fn trailing_yields_after_silence() {
     // Test: Trailing mode should yield only after cooldown period of silence
     let debounce = Debouncer::new(Duration::from_secs(5), DebounceMode::Trailing);
 
-    debounce.trigger().await;
+    debounce.trigger();
     let mut yielded = false;
 
     tokio::select! {
@@ -60,9 +60,9 @@ async fn trailing_reschedules_on_repeated_trigger() {
     // Test: Trailing mode restarts its cooldown on each new trigger
     let debounce = Debouncer::new(Duration::from_secs(5), DebounceMode::Trailing);
 
-    debounce.trigger().await;
+    debounce.trigger();
     time::advance(Duration::from_secs(3)).await;
-    debounce.trigger().await; // should extend the debounce
+    debounce.trigger(); // should extend the debounce
 
     let mut yielded = false;
     tokio::select! {
@@ -79,9 +79,9 @@ async fn trailing_reschedules_on_repeated_trigger() {
 async fn done_clears_trigger_flag() {
     // Test: Calling .done() clears the trigger flag
     let debounce = Debouncer::new(Duration::from_secs(10), DebounceMode::Leading);
-    debounce.trigger().await;
+    debounce.trigger();
     let mut guard = debounce.ready().await;
-    guard.done().await;
+    guard.done();
 
     assert!(!debounce.is_triggered().await);
 }
@@ -91,7 +91,7 @@ async fn drop_defers_trigger_in_trailing() {
     // Test: Dropping guard without done() should re-trigger in trailing mode
     let debounce = Debouncer::new(Duration::from_secs(5), DebounceMode::Trailing);
 
-    debounce.trigger().await;
+    debounce.trigger();
     {
         let _guard = debounce.ready().await;
         // dropped without done()
@@ -107,16 +107,16 @@ async fn multiple_triggers_yield_only_once() {
     // Test: Multiple triggers don't cause multiple yields within cooldown
     let debounce = Debouncer::new(Duration::from_secs(5), DebounceMode::Trailing);
 
-    debounce.trigger().await;
-    debounce.trigger().await;
-    debounce.trigger().await;
+    debounce.trigger();
+    debounce.trigger();
+    debounce.trigger();
 
     time::advance(Duration::from_secs(5)).await;
     let mut _guard = debounce.ready().await;
 
     let mut yielded = false;
     tokio::select! {
-        mut g = debounce.ready() => { g.done().await; yielded = true; }
+        mut g = debounce.ready() => { g.done(); yielded = true; }
         _ = time::sleep(Duration::from_secs(1)) => {}
     }
     assert!(yielded, "No second yield without new trigger");
@@ -128,7 +128,7 @@ async fn ready_without_done_retriggers() {
     // Test: If guard is dropped without .done(), debounce is re-armed
     let debounce = Debouncer::new(Duration::from_secs(5), DebounceMode::Trailing);
 
-    debounce.trigger().await;
+    debounce.trigger();
     time::advance(Duration::from_secs(5)).await;
 
     {
