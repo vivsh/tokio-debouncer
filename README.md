@@ -14,12 +14,9 @@
 * ✅ Asynchronous debounce for event-driven tasks
 * ✅ Leading and trailing debounce strategies
 * ✅ Deterministic, cancel-safe state transitions
-* ✅ Simple, ergonomic API (no explicit `.done()`; guard finalizes on drop)
+* ✅ Simple, ergonomic API 
 * ✅ Fully tested using `tokio::time::pause` for time-based simulation
 * ✅ Feature-flagged `parking_lot` support (enabled by default)
-* ✅ Mutex poison handling via `MutexExt` trait
-* ✅ Comprehensive documentation and examples
-* ✅ Professionally published and maintained
 
 ---
 
@@ -122,13 +119,26 @@ async fn main() {
 
 - `debouncer.trigger()` can be called from any thread or task to signal new work.
 - The worker loop uses `select!` to wait for either debounce readiness or other events.
-- **Call `guard.done()` immediately after acquiring the guard to commit the debounce state.**
 
 ---
 
 ### Best Practice
 
 The debounce state is now finalized automatically when the guard is dropped. You do not need to call any method to commit the debounce; simply let the guard go out of scope after acquiring it. This ensures robust, cancellation-safe batching, even if your task is cancelled or panics after acquiring the guard.
+
+---
+
+## ⚙️ Cargo Features
+
+- **`parking_lot`** *(default)*: Use `parking_lot::Mutex` for improved performance and poisoning behavior. Disable with `default-features = false` to use `std::sync::Mutex` instead.
+- **`std`**: (Always enabled) Use standard library features. Present for compatibility with some dependency managers.
+
+Example disabling `parking_lot`:
+
+```toml
+[dependencies]
+tokio-debouncer = { version = "0.3", default-features = false }
+```
 
 ---
 
