@@ -1,6 +1,6 @@
 [package]
 name = "tokio-debouncer"
-version = "0.3.0"
+version = "0.3.1"
 edition = "2021"
 description = "A minimal async debouncer for signal batching in Tokio"
 repository = "https://github.com/vivsh/tokio-debouncer"
