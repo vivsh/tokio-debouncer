@@ -23,10 +23,8 @@
 //!     // Create a debouncer with a 100ms cooldown in trailing mode
 //!     let debouncer = Debouncer::new(Duration::from_millis(100), DebounceMode::Trailing);
 //!     debouncer.trigger(); // Signal an event
-//!     let mut guard = debouncer.ready().await; // Wait until ready
-//!     // Always call done() as soon as you acquire the guard!
-//!     guard.done();
-//!     // Do your work after marking as done
+//!     let _guard = debouncer.ready().await; // Wait until ready; debounce is finalized on drop
+//!     // Do your work here
 //! }
 //! ```
 //!
@@ -54,8 +52,8 @@
 //!          }
 //!        // Wait for the debouncer to be ready
 //!         select! {
-//!             mut guard = debouncer.ready() => {
-//!                 guard.done(); // Always call done() first!
+//!             _guard = debouncer.ready() => {
+//!                 // Debounce is finalized automatically on drop
 //!                 println!("Processing job batch!");
 //!             }
 //!             _ = sleep(Duration::from_millis(100)) => {
@@ -68,7 +66,9 @@
 //!
 //! ## Best Practice
 //!
-//! Always call `guard.done()` as soon as you acquire the guard, before doing any actual work. This ensures the debounce state is committed and is cancel-safe. If you do work before calling `done()`, you risk re-processing or double-processing if the task is cancelled or panics.
+//! The debounce state is now finalized automatically when the guard is dropped. You do not need to call any method to commit the debounce; simply let the guard go out of scope after acquiring it. This ensures robust, cancellation-safe batching, even if your task is cancelled or panics after acquiring the guard.
+//!
+//! If you need to do work after acquiring the guard, do it after awaiting `ready()` and let the guard drop naturally.
 
 use std::marker::PhantomData;
 use std::sync::{Arc};
@@ -145,8 +145,9 @@ impl DebouncerInner {
 }
 
 /// Guard returned by Debouncer::ready().
-/// You must call done() or drop it to finish the debounce.
-#[must_use = "DebouncerGuard must be held or .done() must be called to avoid re-triggering"]
+///
+/// The debounce state is finalized automatically when this guard is dropped.
+/// You do not need to call any method to commit the debounce; simply let the guard go out of scope.
 pub struct DebouncerGuard<'a> {
     inner: Arc<DebouncerInner>,
     completed: bool,
@@ -163,24 +164,18 @@ impl<'a> DebouncerGuard<'a> {
             _not_static: PhantomData,
         }
     }
-
-    /// Mark the debounce as done. Always call this as soon as you acquire the guard!
-    pub fn done(&mut self) {
-        if self.completed {
-            return;
-        }
-        self.completed = true;
-        self.inner.finalize(false)
-    }
 }
 
 impl<'a> Drop for DebouncerGuard<'a> {
-    /// If dropped without calling done(), the debounce is finalized as incomplete (re-arms).
+    /// Finalizes the debounce state when the guard is dropped.
+    ///
+    /// This ensures cancel-safety: if your task is cancelled or panics after acquiring the guard,
+    /// the debounce state is still committed and the next batch can proceed.
     fn drop(&mut self) {
         if !self.completed {
             let inner = self.inner.clone();
             self.completed = true;
-            inner.finalize(true);
+            inner.finalize(false);
         }
     }
 }
@@ -237,11 +232,11 @@ impl Debouncer {
     }
 
     /// Wait until the debouncer is ready to run.
-    /// Returns a guard that must be used or dropped.
+    /// Returns a guard that finalizes the debounce state when dropped.
     ///
     /// # Cancel Safety
     /// This method is cancel-safe and does not change internal state until the guard is used.
-    #[must_use = "You must await and use the DebouncerGuard to finalize the debounce"]
+    /// The debounce is committed automatically when the guard is dropped, so you do not need to call any method.
     pub async fn ready<'a>(&self) -> DebouncerGuard<'a> {
         // Do not change state here to keep it cancel-safe for use inside select
         loop {
