@@ -14,8 +14,12 @@
 * ✅ Asynchronous debounce for event-driven tasks
 * ✅ Leading and trailing debounce strategies
 * ✅ Deterministic, cancel-safe state transitions
-* ✅ Simple API with minimal overhead
+* ✅ Simple, ergonomic API (no explicit `.done()`; guard finalizes on drop)
 * ✅ Fully tested using `tokio::time::pause` for time-based simulation
+* ✅ Feature-flagged `parking_lot` support (enabled by default)
+* ✅ Mutex poison handling via `MutexExt` trait
+* ✅ Comprehensive documentation and examples
+* ✅ Professionally published and maintained
 
 ---
 
@@ -52,10 +56,9 @@ async fn main() {
     // Create a debouncer with a 100ms cooldown in trailing mode
     let debouncer = Debouncer::new(Duration::from_millis(100), DebounceMode::Trailing);
     debouncer.trigger(); // Signal an event
-    let mut guard = debouncer.ready().await; // Wait until ready
-    // Do work after debounce
-    guard.done(); // Always call done() as soon as you acquire the guard!
-}
+    let _guard = debouncer.ready().await; // Wait until ready; debounce is finalized on drop
+    // Do your work here
+} // guard dropped here, debounce is finalized
 ```
 
 ---
@@ -65,13 +68,10 @@ async fn main() {
 * `Debouncer::new(Duration, DebounceMode)` — create a new debouncer
 * `Debouncer::trigger()` — signal that an event occurred
 * `Debouncer::ready()` — await until it's appropriate to run
-* `DebouncerGuard::done()` — mark the work as complete
 
 > **Note:**
 > - `ready()` is cancel-safe and does not change internal state.
-> - Only `guard.done()` commits state changes.
-> - If `.done()` is not called, the debouncer assumes the work was incomplete and re-arms itself.
-> - **Always call `guard.done()` as soon as you acquire the guard, before doing any actual work.**
+> - The debounce state is finalized automatically when the guard is dropped. You do not need to call any method to commit the debounce; simply let the guard go out of scope after acquiring it. This ensures robust, cancellation-safe batching, even if your task is cancelled or panics after acquiring the guard.
 
 ---
 
@@ -108,9 +108,7 @@ async fn main() {
 
     loop {
         select! {
-            mut guard = debouncer.ready() => {
-                // Always call guard.done() as early as possible!
-                guard.done();
+            _ = debouncer.ready() => {
                 // Now process your batch of jobs
                 println!("Processing job batch!");
             }
@@ -128,8 +126,9 @@ async fn main() {
 
 ---
 
-> **Best Practice:**
-> Always call `guard.done()` as soon as you acquire the guard, before doing any actual work. This ensures the debounce state is committed and is cancel-safe. If you do work before calling `done()`, you risk re-processing or double-processing if the task is cancelled or panics.
+### Best Practice
+
+The debounce state is now finalized automatically when the guard is dropped. You do not need to call any method to commit the debounce; simply let the guard go out of scope after acquiring it. This ensures robust, cancellation-safe batching, even if your task is cancelled or panics after acquiring the guard.
 
 ---
 
