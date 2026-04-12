@@ -148,6 +148,7 @@ impl DebouncerInner {
 ///
 /// The debounce state is finalized automatically when this guard is dropped.
 /// You do not need to call any method to commit the debounce; simply let the guard go out of scope.
+#[must_use = "if unused the debounce state will be finalized immediately"]
 pub struct DebouncerGuard<'a> {
     inner: Arc<DebouncerInner>,
     completed: bool,
